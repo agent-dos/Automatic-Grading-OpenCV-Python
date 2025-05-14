@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-import detect_answer
+from detect_answer import answer_detector
 from grade_paper import ProcessPage
 from transform_image import transform_paper_image
 
@@ -9,7 +9,7 @@ cv2.namedWindow('Scanned Paper')
 
 # ret, image = cap.read()
 image = cv2.imread("images\enhanced_answer_sheet (1).png")
-image, paper, biggestContour, answers, codes = detect_answer(image)
+image, paper, biggestContour, answers, codes = answer_detector(image)
 
 cv2.imshow("Scanned Paper", paper)
 cv2.imwrite("images/scanned_output.jpg", paper)
