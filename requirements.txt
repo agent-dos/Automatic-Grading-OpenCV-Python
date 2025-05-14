@@ -1,7 +1,7 @@
-numpy==1.13.1
-olefile==0.44
-opencv-python==3.3.0.10
-Pillow==4.2.1
-qrcode==5.3
-six==1.11.0
-zbarlight==1.2
+numpy>=1.26.0
+olefile>=0.46
+opencv-python>=4.9.0.80
+Pillow>=10.2.0
+qrcode>=7.4.2
+six>=1.16.0
+pyzbar>=0.1.9

@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from PIL import Image
-import zbarlight
+import pyzbar
 
 epsilon = 10 #image error sensitivity
 test_sensitivity_epsilon = 10 #bubble darkness error sensitivity
@@ -22,7 +22,7 @@ spacing = [35.0 / scaling[0], 32.0 / scaling[1]] #spacing of the rows and column
 def ProcessPage(paper):
     answers = [] #contains answers
     gray_paper = cv2.cvtColor(paper, cv2.COLOR_BGR2GRAY) #convert image to grayscale
-    codes = zbarlight.scan_codes('qrcode', Image.fromarray(np.uint8(gray_paper))) #look for QR code
+    codes = pyzbar.scan_codes('qrcode', Image.fromarray(np.uint8(gray_paper))) #look for QR code
     corners = FindCorners(paper) #find the corners of the bubbled area
 
     #if we can't find the markers, return an error
