@@ -13,7 +13,7 @@ cv2.namedWindow('Original Image')
 cv2.namedWindow('Scanned Paper')
 
 # ret, image = cap.read()
-image = cv2.imread("images/test.jpg")
+image = cv2.imread("images/answer_sheet.jpg")
 ratio = len(image[0]) / 500.0  # used for resizing the image
 original_image = image.copy()  # make a copy of the original image
 
