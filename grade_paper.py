@@ -90,7 +90,7 @@ def ProcessPage(paper):
                 questions.append(gray_paper[y1:y2, x1:x2])
 
             # Darkness analysis
-            means = [np.mean(q) for q in questions]
+            means = [np.mean(q) if q.size > 0 else 255 for q in questions]
             min_arg = np.argmin(means)
             min_val = means[min_arg]
 
