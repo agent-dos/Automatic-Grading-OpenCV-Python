@@ -5,7 +5,7 @@ from pyzbar import pyzbar
 
 # === Constants ===
 epsilon = 10  # image error sensitivity
-test_sensitivity_epsilon = 25  # bubble darkness error sensitivity
+test_sensitivity_epsilon = 30  # bubble darkness error sensitivity
 answer_choices = ['A', 'B', 'C', 'D', 'E', '?']
 
 # Paper and bubble geometry (8.5in x 11in @ scaling)
