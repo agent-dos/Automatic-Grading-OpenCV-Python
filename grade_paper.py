@@ -27,20 +27,20 @@ NUM_ITEMS_PER_COLUMN = 30
 NUM_CHOICES = 5
 
 # Bounding box dimensions as multiple of radius
-BBOX_SCALE_X = 1.2  # width multiplier
+BBOX_SCALE_X = 1.3  # width multiplier
 BBOX_SCALE_Y = 0.8  # height multiplier (typically same as diameter)
 
 # Column anchor points (normalized relative to paper width and height)
 COLUMN_ORIGINS = [
-    [90 / scaling[0], 36.8 / scaling[1]],   # Left column top-left
-    [440.0 / scaling[0], 36.8 / scaling[1]]   # Right column top-left
+    [92.8 / scaling[0], 37.8 / scaling[1]],   # Left column top-left
+    [443.2 / scaling[0], 37.8 / scaling[1]]   # Right column top-left
 ]
 
 # Horizontal spacing between choices (normalized width units)
 CHOICE_SPACING_X = 29.0 / scaling[0]  # adjust if needed
 
 # Vertical spacing between items
-ITEM_SPACING_Y = 26.14 / scaling[1]
+ITEM_SPACING_Y = 25.85 / scaling[1]
 
 ANSWER_FONT_SCALE = 0.3
 ANSWER_FONT_THICKNESS = 1

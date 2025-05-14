@@ -72,7 +72,14 @@ def transform_paper_image(image):
     if biggestContour is not None:
         # create persepctive matrix
         M = cv2.getPerspectiveTransform(points, desired_points)
+
         # warp persepctive
         paper = cv2.warpPerspective(original_image, M, (425, 550))
+        
+        # Resize to match expected dimensions for grading
+        paper = cv2.resize(paper, (605, 835))
+    else:
+        # Generate a white blank image instead of returning an empty list
+        paper = np.ones((835, 605, 3), dtype=np.uint8) * 255
     
     return image, paper, biggestContour

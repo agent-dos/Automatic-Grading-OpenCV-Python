@@ -44,9 +44,16 @@ if uploaded_file:
     # Step 3: Process Page (if preprocessing succeeded)
     extracted_answers, codes = [-1], [-1]
     graded_image = None
-    if warped_paper is not None and warped_paper.size != 0:
-        extracted_answers, graded_image, codes = ProcessPage(
-            warped_paper.copy())
+    expected_shape = (835, 605, 3)  # height, width, channels
+    if (
+        warped_paper is not None and
+        isinstance(warped_paper, np.ndarray) and
+        warped_paper.size != 0 and
+        warped_paper.shape == expected_shape
+    ):
+        extracted_answers, graded_image, codes = ProcessPage(warped_paper.copy())
+    else:
+        st.warning("🛑 Invalid warped paper image. Skipping grading.")
 
     # Display pipeline stages
     col1, col2, col3, col4 = st.columns(4)
