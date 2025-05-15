@@ -3,6 +3,8 @@ import numpy as np
 from PIL import Image
 from pyzbar import pyzbar
 
+from qr_code import detect_qr_code
+
 # === Constants ===
 epsilon = 10  # image error sensitivity
 test_sensitivity_epsilon = 30  # bubble darkness error sensitivity
@@ -45,9 +47,6 @@ ITEM_SPACING_Y = 25.85 / scaling[1]
 ANSWER_FONT_SCALE = 0.3
 ANSWER_FONT_THICKNESS = 1
 
-QR_FONT_SCALE = 0.4
-QR_FONT_THICKNESS = 1
-
 # Variable aliasing to make it compatible
 columns = COLUMN_ORIGINS
 
@@ -55,11 +54,6 @@ columns = COLUMN_ORIGINS
 def ProcessPage(paper):
     answers = []
     gray_paper = cv2.cvtColor(paper, cv2.COLOR_BGR2GRAY)
-
-    # QR Code decoding
-    decoded_objects = pyzbar.decode(gray_paper)
-    codes = [obj.data.decode('utf-8')
-             for obj in decoded_objects] if decoded_objects else None
 
     # Locate markers
     corners = FindCorners(paper)
@@ -108,13 +102,7 @@ def ProcessPage(paper):
                         cv2.FONT_HERSHEY_SIMPLEX, ANSWER_FONT_SCALE, (0, 150, 0), ANSWER_FONT_THICKNESS)
             answers.append(answer_choices[min_arg])
 
-    # Annotate name from QR
-    if codes is not None:
-        cv2.putText(paper, codes[0],
-                    (int(0.28 * dimensions[0]), int(0.125 * dimensions[1])),
-                    cv2.FONT_HERSHEY_SIMPLEX, QR_FONT_SCALE, (0, 0, 0), QR_FONT_THICKNESS)
-    else:
-        codes = [-1]
+    codes = detect_qr_code(gray_paper, paper, dimensions)
 
     return answers, paper, codes
 

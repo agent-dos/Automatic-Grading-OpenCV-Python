@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from detect_answer import answer_detector
 from enhance_image import image_enhancer
+from datetime import datetime
 
 # === Logger Setup ===
 logging.basicConfig(
@@ -17,9 +18,10 @@ console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
 
 # === Configuration ===
-USE_WEBCAM = True  # Set to False to use video file
-VIDEO_PATH = "videos\\20250515_005333.mp4"
-OUTPUT_PATH = "videos\\output_three_views.avi"
+USE_WEBCAM = False  # Set to False to use video file
+VIDEO_PATH = "videos\\test_video.mp4"
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+OUTPUT_PATH = f"videos/output_three_views_{timestamp}.avi"
 FRAME_SKIP = 1
 
 # === Open capture source ===
@@ -96,12 +98,22 @@ while True:
 
             combined = np.hstack(
                 (original_resized, enhanced_resized, paper_resized))
+            
+            # Annotate frame count on image
+            cv2.putText(combined, f"Frame: {frame_index}", (10, frame_height - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+
+            # Write and optionally display
             out.write(combined)
 
-            # Optional: live preview
-            cv2.imshow("Three-View OMR", combined)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            if USE_WEBCAM:
+                cv2.imshow("Three-View OMR", combined)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
+            # Log every 10 frames
+            if frame_index % 10 == 0:
+                logging.info(f"Rendered frame: {frame_index}")
 
         except Exception as e:
             logging.error(f"Error in frame {frame_index}: {e}")
