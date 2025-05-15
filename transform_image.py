@@ -44,8 +44,7 @@ def transform_paper_image(image):
 
     # used for the perspective transform
     points = []
-    desired_points = [[0, 0], [425, 0], [425, 550],
-                    [0, 550]]  # 8.5in by 11in. paper
+    desired_points = [[0, 0], [595, 0], [595, 842], [0, 842]]  # A4 paper size in pixels at 72 DPI
 
     # convert to np.float32
     desired_points = np.float32(desired_points)
@@ -74,12 +73,12 @@ def transform_paper_image(image):
         M = cv2.getPerspectiveTransform(points, desired_points)
 
         # warp persepctive
-        paper = cv2.warpPerspective(original_image, M, (425, 550))
+        paper = cv2.warpPerspective(original_image, M, (595, 842))
         
         # Resize to match expected dimensions for grading
-        paper = cv2.resize(paper, (605, 835))
+        paper = cv2.resize(paper, (595, 842))
     else:
         # Generate a white blank image instead of returning an empty list
-        paper = np.ones((835, 605, 3), dtype=np.uint8) * 255
+        paper = np.ones((842, 595, 3), dtype=np.uint8) * 255
     
     return image, paper, biggestContour

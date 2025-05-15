@@ -10,8 +10,8 @@ epsilon = 10  # image error sensitivity
 test_sensitivity_epsilon = 30  # bubble darkness error sensitivity
 answer_choices = ['A', 'B', 'C', 'D', 'E', '?']
 
-# Paper and bubble geometry (8.5in x 11in @ scaling)
-scaling = [605.0, 835.0]  # width x height in pixels
+# Paper and bubble geometry (A4: 210mm x 297mm @ 72 DPI)
+scaling = [595.0, 842.0]  # width x height in pixels
 radius = 10.0 / scaling[0]
 spacing = [35.0 / scaling[0], 32.0 / scaling[1]]
 
@@ -30,19 +30,19 @@ NUM_CHOICES = 5
 
 # Bounding box dimensions as multiple of radius
 BBOX_SCALE_X = 1.3  # width multiplier
-BBOX_SCALE_Y = 0.8  # height multiplier (typically same as diameter)
+BBOX_SCALE_Y = 0.9  # height multiplier (typically same as diameter)
 
 # Column anchor points (normalized relative to paper width and height)
 COLUMN_ORIGINS = [
-    [92.8 / scaling[0], 37.8 / scaling[1]],   # Left column top-left
-    [443.2 / scaling[0], 37.8 / scaling[1]]   # Right column top-left
+    [91.4 / scaling[0], 39.8 / scaling[1]],   # Left column top-left
+    [435.0 / scaling[0], 39.8 / scaling[1]]   # Right column top-left
 ]
 
 # Horizontal spacing between choices (normalized width units)
-CHOICE_SPACING_X = 29.0 / scaling[0]  # adjust if needed
+CHOICE_SPACING_X = 28.0 / scaling[0]  # adjust if needed
 
 # Vertical spacing between items
-ITEM_SPACING_Y = 25.85 / scaling[1]
+ITEM_SPACING_Y = 26.2 / scaling[1]
 
 ANSWER_FONT_SCALE = 0.3
 ANSWER_FONT_THICKNESS = 1

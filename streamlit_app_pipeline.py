@@ -44,7 +44,7 @@ if uploaded_file:
     # Step 3: Process Page (if preprocessing succeeded)
     extracted_answers, codes = [-1], [-1]
     graded_image = None
-    expected_shape = (835, 605, 3)  # height, width, channels
+    expected_shape = (842, 595, 3)  # height, width, channels
     if (
         warped_paper is not None and
         isinstance(warped_paper, np.ndarray) and
