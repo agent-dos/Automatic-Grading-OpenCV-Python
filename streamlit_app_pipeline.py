@@ -7,12 +7,13 @@ from enhance_image import image_enhancer
 from grade_paper import ProcessPage
 from transform_image import transform_paper_image
 
+# App title and layout
 st.set_page_config(layout="wide")
-st.title("📄 High-Level OMR Pipeline Viewer")
+st.title("📄 Static Marker-Based OMR Pipeline")
 
 st.markdown("""
-**Pipeline:**
-`Image Enhancement → Largest Contour Detection (transform_paper_image) → Page Processing (ProcessPage)`
+**Pipeline:**  
+`Image Enhancement → Static Marker Detection → Perspective Warp → Grading`
 """)
 
 # Sidebar controls
@@ -34,44 +35,56 @@ if uploaded_file:
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
     original = img.copy()
 
-    # Step 1: Image Enhancement
-    enhanced_color = image_enhancer(img, blur_ksize, block_size, C, morph_kernel_size)
+    # Step 1: Enhance image
+    enhanced = image_enhancer(
+        img, blur_ksize, block_size, C, morph_kernel_size)
 
-    # Step 2: Largest Contour Detection and Warping
-    detected_img, warped_paper, biggestContour = transform_paper_image(
-        enhanced_color.copy())
+    # Step 2: Warp using static marker detection
+    detection_img, warped_paper, _, method_used, marker_points = transform_paper_image(
+        enhanced.copy())
 
-    # Step 3: Process Page (if preprocessing succeeded)
+    # Visual feedback for markers
+    overlay_img = detection_img.copy()
+    if method_used == "static_marker":
+        for (x, y) in marker_points:
+            cv2.circle(overlay_img, (int(x), int(y)), 10, (0, 0, 255), -1)
+        st.sidebar.success("✅ Static Marker-Based Warp Applied")
+    else:
+        st.sidebar.error("🛑 Marker detection failed. Blank fallback applied.")
+
+    # Step 3: Process for answers and QR
     extracted_answers, codes = [-1], [-1]
     graded_image = None
-    expected_shape = (842, 595, 3)  # height, width, channels
+    expected_shape = (1202, 850, 3)  # static 103 DPI A4
+
     if (
         warped_paper is not None and
         isinstance(warped_paper, np.ndarray) and
         warped_paper.size != 0 and
         warped_paper.shape == expected_shape
     ):
-        extracted_answers, graded_image, codes = ProcessPage(warped_paper.copy())
+        extracted_answers, graded_image, codes = ProcessPage(
+            warped_paper.copy())
     else:
-        st.warning("🛑 Invalid warped paper image. Skipping grading.")
+        st.warning("🛑 Invalid warped paper. Skipping grading.")
 
-    # Display pipeline stages
+    # Display pipeline
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.image(original, caption="🖼 Original", use_column_width=True)
+        st.image(original, caption="🖼 Original", use_container_width=True)
     with col2:
-        st.image(enhanced_color, caption="✨ Enhanced", use_column_width=True)
+        st.image(enhanced, caption="✨ Enhanced", use_container_width=True)
     with col3:
-        st.image(detected_img, caption="📐 Contour Detection",
-                 use_column_width=True)
+        st.image(overlay_img, caption="📍 Marker Overlay",
+                 use_container_width=True)
     with col4:
         if graded_image is not None:
             st.image(graded_image, caption="📊 Graded Sheet",
-                     use_column_width=True)
+                     use_container_width=True)
         else:
-            st.warning("Processing failed. No valid paper extracted.")
+            st.warning("Grading skipped due to failure.")
 
-    # Results section
+    # Results
     st.markdown("---")
     st.markdown("### ✅ Extracted Information")
     if codes != [-1]:
@@ -84,7 +97,7 @@ if uploaded_file:
         for i, ans in enumerate(extracted_answers):
             st.write(f"Q{i+1}: {'❓' if ans == '?' else ans}")
     else:
-        st.markdown("Answers could not be extracted.")
+        st.markdown("No answers extracted.")
 
     # Download result
     if graded_image is not None:
@@ -92,5 +105,5 @@ if uploaded_file:
             cv2.cvtColor(graded_image, cv2.COLOR_BGR2RGB))
         buf = BytesIO()
         result_pil.save(buf, format="PNG")
-        st.download_button("📥 Download Result", data=buf.getvalue(
-        ), file_name="graded_sheet.png", mime="image/png")
+        st.download_button("📥 Download Graded Sheet", data=buf.getvalue(),
+                           file_name="graded_sheet.png", mime="image/png")

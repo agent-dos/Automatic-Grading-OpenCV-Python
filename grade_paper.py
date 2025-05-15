@@ -10,8 +10,8 @@ epsilon = 10  # image error sensitivity
 test_sensitivity_epsilon = 30  # bubble darkness error sensitivity
 answer_choices = ['A', 'B', 'C', 'D', 'E', '?']
 
-# Paper and bubble geometry (A4: 210mm x 297mm @ 72 DPI)
-scaling = [595.0, 842.0]  # width x height in pixels
+# Paper and bubble geometry (A4 rendered at 103 DPI, 850x1202 px)
+scaling = [850.0, 1202.0]
 radius = 10.0 / scaling[0]
 spacing = [35.0 / scaling[0], 32.0 / scaling[1]]
 
@@ -29,23 +29,23 @@ NUM_ITEMS_PER_COLUMN = 30
 NUM_CHOICES = 5
 
 # Bounding box dimensions as multiple of radius
-BBOX_SCALE_X = 1.3  # width multiplier
-BBOX_SCALE_Y = 0.9  # height multiplier (typically same as diameter)
+BBOX_SCALE_X = 1.8  # width multiplier
+BBOX_SCALE_Y = 1.2  # height multiplier (typically same as diameter)
 
 # Column anchor points (normalized relative to paper width and height)
 COLUMN_ORIGINS = [
-    [91.4 / scaling[0], 39.8 / scaling[1]],   # Left column top-left
-    [435.0 / scaling[0], 39.8 / scaling[1]]   # Right column top-left
+    [126 / scaling[0], 59 / scaling[1]],     # left column
+    [618 / scaling[0], 59 / scaling[1]]      # right column
 ]
 
 # Horizontal spacing between choices (normalized width units)
-CHOICE_SPACING_X = 28.0 / scaling[0]  # adjust if needed
+CHOICE_SPACING_X = 41 / scaling[0]  # adjust if needed
 
 # Vertical spacing between items
-ITEM_SPACING_Y = 26.2 / scaling[1]
+ITEM_SPACING_Y = 37.2 / scaling[1]
 
-ANSWER_FONT_SCALE = 0.3
-ANSWER_FONT_THICKNESS = 1
+ANSWER_FONT_SCALE = 0.6
+ANSWER_FONT_THICKNESS = 2
 
 # Variable aliasing to make it compatible
 columns = COLUMN_ORIGINS
@@ -95,7 +95,7 @@ def ProcessPage(paper):
                 min_arg = NUM_CHOICES  # '?'
 
             # Annotate and save
-            x_text = int((columns[k][0] - radius * 8) *
+            x_text = int((columns[k][0] - radius * 10) *
                          dimensions[0] + corners[0][0])
             y_text = int(y_center + 0.5 * radius * dimensions[1])
             cv2.putText(paper, answer_choices[min_arg], (x_text, y_text),
