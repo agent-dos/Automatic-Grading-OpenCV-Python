@@ -1,9 +1,12 @@
 import cv2
-import logging
 import numpy as np
-from detect_answer import answer_detector
-from enhance_image import image_enhancer
+import logging
 from datetime import datetime
+from qr_code import get_qr_exclusion_mask, get_qr_roi_bounds
+
+from enhance_image import image_enhancer
+from transform_image import transform_paper_image
+from grade_paper import ProcessPage
 
 # === Logger Setup ===
 logging.basicConfig(
@@ -19,10 +22,16 @@ logging.getLogger('').addHandler(console)
 
 # === Configuration ===
 USE_WEBCAM = False  # Set to False to use video file
-VIDEO_PATH = "videos\\test_video.mp4"
+VIDEO_PATH = "videos/test_video.mp4"
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 OUTPUT_PATH = f"videos/output_three_views_{timestamp}.avi"
 FRAME_SKIP = 1
+
+# === Enhancement Parameters ===
+BLUR_KSIZE = 5
+BLOCK_SIZE = 31
+C = 10
+MORPH_KERNEL = 3
 
 # === Open capture source ===
 if USE_WEBCAM:
@@ -46,7 +55,7 @@ if test_frame.shape[1] > test_frame.shape[0]:
     test_frame = cv2.rotate(test_frame, cv2.ROTATE_90_CLOCKWISE)
 
 frame_height, frame_width = test_frame.shape[:2]
-fps = cap.get(cv2.CAP_PROP_FPS) or 30  # fallback for webcam
+fps = cap.get(cv2.CAP_PROP_FPS) or 30
 
 # === Define writer for side-by-side view ===
 combined_width = frame_width * 3
@@ -72,38 +81,48 @@ while True:
         try:
             original = frame.copy()
 
-            # Detect answers and enhanced image
-            enhanced, paper_with_answers, biggestContour, answers, codes = answer_detector(
-                frame.copy())
+            # === Step 1: Enhance the image ===
+            enhanced = image_enhancer(
+                frame.copy(), BLUR_KSIZE, BLOCK_SIZE, C, MORPH_KERNEL)
 
-            # Draw contour on enhanced
-            if biggestContour is not None:
-                cv2.drawContours(
-                    enhanced, [biggestContour], -1, (0, 255, 0), 2)
+            # === Step 2: Dual-stage perspective transform ===
+            marker_preview, warped_paper, contour, method, marker_pts = transform_paper_image(
+                enhanced.copy()
+            )
 
-            # Annotate answers
+            cv2.putText(marker_preview, f"Transform: {method}", (10, 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
+
+            if method == "fallback":
+                logging.warning(f"Frame {frame_index}: fallback transformation used (no contour or markers found).")
+            elif method == "static_marker":
+                logging.info(f"Frame {frame_index}: only marker-based transform used.")
+            elif method == "dual_stage":
+                logging.info(f"Frame {frame_index}: dual-stage (contour + marker) transform successful.")
+
+            # === Step 3: Extract answers from warped image ===
+            answers, annotated_paper, codes = ProcessPage(warped_paper.copy())
+
+            # === Annotate results ===
             if answers != -1 and answers != [-1]:
                 for i, ans in enumerate(answers):
                     y = 30 + i * 20
-                    cv2.putText(paper_with_answers, f"{i+1}: {ans}", (10, y),
+                    cv2.putText(annotated_paper, f"{i+1}: {ans}", (10, y),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 
-            # Resize all images to match
+            # === Resize for horizontal stacking ===
             original_resized = cv2.resize(
                 original, (frame_width, frame_height))
             enhanced_resized = cv2.resize(
-                enhanced, (frame_width, frame_height))
-            paper_resized = cv2.resize(
-                paper_with_answers, (frame_width, frame_height))
+                marker_preview, (frame_width, frame_height))
+            annotated_resized = cv2.resize(
+                annotated_paper, (frame_width, frame_height))
 
             combined = np.hstack(
-                (original_resized, enhanced_resized, paper_resized))
-            
-            # Annotate frame count on image
+                (original_resized, enhanced_resized, annotated_resized))
             cv2.putText(combined, f"Frame: {frame_index}", (10, frame_height - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
 
-            # Write and optionally display
             out.write(combined)
 
             if USE_WEBCAM:
@@ -111,7 +130,6 @@ while True:
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
-            # Log every 10 frames
             if frame_index % 10 == 0:
                 logging.info(f"Rendered frame: {frame_index}")
 
