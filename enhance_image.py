@@ -21,3 +21,26 @@ def image_enhancer(img, blur_ksize, block_size, C, morph_kernel_size):
     kernel = np.ones((morph_kernel_size, morph_kernel_size), np.uint8)
     enhanced = cv2.morphologyEx(adaptive_thresh, cv2.MORPH_OPEN, kernel)
     return cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
+
+
+def auto_enhance_image(img, blur_ksize, block_size, morph_kernel_size, C_range=range(2, 11)):
+    """
+    Test a range of C values for adaptive thresholding and return the best enhancement
+    based on simple contrast metric (standard deviation).
+    """
+    best_img = None
+    best_std = -1
+    best_C = None
+
+    for C in C_range:
+        enhanced = image_enhancer(
+            img.copy(), blur_ksize, block_size, C, morph_kernel_size)
+        gray = cv2.cvtColor(enhanced, cv2.COLOR_BGR2GRAY)
+        std = np.std(gray)
+        if std > best_std:
+            best_std = std
+            best_img = enhanced
+            best_C = C
+
+    print(f"[AutoEnhance] Best C: {best_C} with contrast std: {best_std:.2f}")
+    return best_img, best_C
