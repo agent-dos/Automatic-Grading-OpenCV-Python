@@ -4,10 +4,11 @@ from PIL import Image
 from pyzbar import pyzbar
 
 from qr_code import detect_qr_code
+from transform_image import detect_marker_positions_multiscale
 
 # === Constants ===
 epsilon = 2  # image error sensitivity
-test_sensitivity_epsilon = 30  # bubble darkness error sensitivity
+test_sensitivity_epsilon = 10  # bubble darkness error sensitivity
 answer_choices = ['A', 'B', 'C', 'D', 'E', '?']
 
 # Paper and bubble geometry (A4 rendered at 103 DPI, 850x1202 px)
@@ -51,13 +52,12 @@ ANSWER_FONT_THICKNESS = 2
 columns = COLUMN_ORIGINS
 
 
-def ProcessPage(paper, marker_corners=None):
+def ProcessPage(paper):
     answers = []
     gray_paper = cv2.cvtColor(paper, cv2.COLOR_BGR2GRAY)
 
     # Use passed marker positions or fallback to FindCorners
-    if marker_corners is None:
-        marker_corners = FindCorners(paper)
+    marker_corners = FindCorners(paper)
     if marker_corners is None:
         return [-1], paper, [-1]
     corners = marker_corners
@@ -105,30 +105,17 @@ def ProcessPage(paper, marker_corners=None):
 
 def FindCorners(paper):
     gray_paper = cv2.cvtColor(paper, cv2.COLOR_BGR2GRAY)
-    ratio = len(paper[0]) / 816.0
-    if ratio == 0:
-        return -1
+    try:
+        # Use multi-scale marker detection
+        positions = detect_marker_positions_multiscale(
+            gray_paper, scale_range=[0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5])
 
-    corners = []
-    for tag in tags:
-        tag = cv2.resize(tag, (0, 0), fx=ratio, fy=ratio)
-        conv = cv2.filter2D(np.float32(cv2.bitwise_not(
-            gray_paper)), -1, np.float32(cv2.bitwise_not(tag)))
-        max_pos = np.unravel_index(conv.argmax(), conv.shape)
-        corners.append([max_pos[1], max_pos[0]])
+        # Optional: Draw detected marker circles for visualization
+        for pt in positions:
+            cv2.circle(paper, (int(pt[0]), int(pt[1])), 12, (0, 255, 0), 2)
 
-    for corner in corners:
-        cv2.rectangle(paper,
-                      (corner[0] - int(ratio * 25),
-                       corner[1] - int(ratio * 25)),
-                      (corner[0] + int(ratio * 25),
-                       corner[1] + int(ratio * 25)),
-                      (0, 255, 0), 2)
+        return positions.tolist()  # Return in the same format as before
 
-    if corners[0][0] - corners[2][0] > epsilon or \
-       corners[1][0] - corners[3][0] > epsilon or \
-       corners[0][1] - corners[1][1] > epsilon or \
-       corners[2][1] - corners[3][1] > epsilon:
+    except Exception as e:
+        print(f"[FindCorners Error] {e}")
         return None
-
-    return corners

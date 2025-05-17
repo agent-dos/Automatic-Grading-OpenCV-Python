@@ -10,26 +10,29 @@ from transform_image import transform_paper_image
 from grade_paper import ProcessPage
 
 # ------------------- Constants -------------------
-C_RANGE = list(range(2, 11))  # Default C tuning range
 EXPECTED_WIDTH = 850
 EXPECTED_HEIGHT = 1202
 
 # ------------------- Helper Functions -------------------
 
 
-def range_slider_param(name, min_val, max_val, default, step, delta=2):
-    center = st.sidebar.slider(name, min_val, max_val, default, step=step)
-    lower = max(min_val, center - delta * step)
-    upper = min(max_val, center + delta * step)
-    values = list(range(lower, upper + 1, step))
-    return center, values
+def range_slider_param_range(name, min_val, max_val, default_range, step):
+    min_selected, max_selected = st.sidebar.slider(
+        f"{name} Range", min_val, max_val, default_range, step=step)
+    values = list(range(min_selected, max_selected + 1, step))
+    return (min_selected + max_selected) // 2, values
 
 
-def auto_enhance_and_process(img, param_grid, blur_ksize, block_size, morph_kernel_size):
+def auto_enhance_and_process(img, param_grid):
     best_result = None
     best_score = -1
 
-    for C in param_grid["C"]:
+    for C, blur_ksize, block_size, morph_kernel_size in product(
+        param_grid["C"],
+        param_grid["blur_ksize"],
+        param_grid["block_size"],
+        param_grid["morph_kernel_size"]
+    ):
         try:
             enhanced = image_enhancer(
                 img.copy(), blur_ksize, block_size, C, morph_kernel_size)
@@ -79,12 +82,22 @@ st.set_page_config(layout="wide")
 st.title("🧠 Enhanced Auto-Tuning OMR Pipeline")
 
 st.sidebar.title("🔧 Auto-Tuning Parameters")
-blur_c, _ = range_slider_param("Gaussian Blur (Kernel Size)", 1, 15, 5, 2)
-block_c, _ = range_slider_param("Adaptive Threshold Block Size", 3, 101, 11, 2)
-morph_c, _ = range_slider_param("Morphological Kernel Size", 1, 10, 2, 1)
+blur_c, blur_range = range_slider_param_range(
+    "Gaussian Blur (Kernel Size)", 1, 15, (3, 7), 2)
+block_c, block_range = range_slider_param_range(
+    "Adaptive Threshold Block Size", 3, 101, (9, 15), 2)
+morph_c, morph_range = range_slider_param_range(
+    "Morphological Kernel Size", 1, 10, (1, 3), 1)
+c_min, c_max = st.sidebar.slider(
+    "C Tuning Range (Adaptive Threshold)", 0, 20, (2, 10), step=1)
+c_range = list(range(c_min, c_max + 1))
 
+total_combinations = len(blur_range) * len(block_range) * \
+    len(morph_range) * len(c_range)
+st.sidebar.markdown(f"🔢 **Total Combinations:** `{total_combinations}`")
 st.sidebar.caption(
-    "🔁 C is automatically tuned from 2 to 10 based on contrast.")
+    "🔁 Define parameter ranges for efficient adaptive threshold tuning.")
+
 auto_mode = st.sidebar.checkbox("🧠 Enable Auto-Tuning", value=True)
 
 uploaded_file = st.sidebar.file_uploader(
@@ -97,9 +110,13 @@ if uploaded_file:
 
     result = None
     if auto_mode:
-        param_grid = {"C": C_RANGE}
-        result = auto_enhance_and_process(
-            original, param_grid, blur_c, block_c, morph_c)
+        param_grid = {
+            "blur_ksize": blur_range,
+            "block_size": block_range,
+            "C": c_range,
+            "morph_kernel_size": morph_range
+        }
+        result = auto_enhance_and_process(original, param_grid)
 
     if result:
         enhanced = result["enhanced"]
