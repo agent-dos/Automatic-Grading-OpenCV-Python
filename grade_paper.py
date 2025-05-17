@@ -8,7 +8,7 @@ from transform_image import detect_marker_positions_multiscale
 
 # === Constants ===
 epsilon = 2  # image error sensitivity
-test_sensitivity_epsilon = 10  # bubble darkness error sensitivity
+test_sensitivity_epsilon = 30  # bubble darkness error sensitivity
 answer_choices = ['A', 'B', 'C', 'D', 'E', '?']
 
 # Paper and bubble geometry (A4 rendered at 103 DPI, 850x1202 px)
