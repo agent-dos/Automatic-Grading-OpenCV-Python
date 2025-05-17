@@ -9,8 +9,8 @@ from grade_paper import ProcessPage
 PARAM_BOUNDS = {
     "blur_ksize": (5, 11),
     "block_size": (51, 51),
-    "C": (5, 5),
-    "morph_kernel_size": (1, 3)
+    "C": (5, 10),
+    "morph_kernel_size": (1, 1)
 }
 
 
@@ -58,7 +58,7 @@ def fitness(individual, image):
         return -999, None, None, None
 
 
-def run_genetic_algorithm(image, pop_size=12, generations=10, mutation_rate=0.2, show_progress=lambda msg: None):
+def run_genetic_algorithm(image, pop_size=8, generations=3, mutation_rate=0.2, show_progress=lambda msg: None):
     population = [generate_individual() for _ in range(pop_size)]
     best_score = -999
     best_result = {}
