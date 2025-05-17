@@ -83,9 +83,9 @@ st.title("🧠 Enhanced Auto-Tuning OMR Pipeline")
 
 st.sidebar.title("🔧 Auto-Tuning Parameters")
 blur_c, blur_range = range_slider_param_range(
-    "Gaussian Blur (Kernel Size)", 1, 15, (3, 7), 2)
+    "Gaussian Blur (Kernel Size)", 1, 30, (3, 7), 1)
 block_c, block_range = range_slider_param_range(
-    "Adaptive Threshold Block Size", 3, 101, (9, 15), 2)
+    "Adaptive Threshold Block Size", 3, 101, (9, 15), 1)
 morph_c, morph_range = range_slider_param_range(
     "Morphological Kernel Size", 1, 10, (1, 3), 1)
 c_min, c_max = st.sidebar.slider(
