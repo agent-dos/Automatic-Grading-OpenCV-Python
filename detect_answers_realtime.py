@@ -4,7 +4,8 @@ import logging
 from datetime import datetime
 from qr_code import get_qr_exclusion_mask, get_qr_roi_bounds
 
-from enhance_image import image_enhancer
+
+from enhance_image import image_enhancer, auto_enhance_image
 from transform_image import transform_paper_image
 from grade_paper import ProcessPage
 
@@ -81,9 +82,11 @@ while True:
         try:
             original = frame.copy()
 
-            # === Step 1: Enhance the image ===
-            enhanced = image_enhancer(
-                frame.copy(), BLUR_KSIZE, BLOCK_SIZE, C, MORPH_KERNEL)
+            # === Step 1: Auto-enhance using best C ===
+            enhanced, best_C = auto_enhance_image(
+                frame.copy(), BLUR_KSIZE, BLOCK_SIZE, MORPH_KERNEL)
+            cv2.putText(enhanced, f"Auto C: {best_C}", (10, 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
 
             # === Step 2: Dual-stage perspective transform ===
             marker_preview, warped_paper, contour, method, marker_pts = transform_paper_image(

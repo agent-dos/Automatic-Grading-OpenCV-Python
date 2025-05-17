@@ -19,7 +19,7 @@ EXPECTED_MARKER_POSITIONS = np.float32([
 
 
 def detect_marker_positions(image_gray):
-    """Find marker centers via template matching."""
+    """Original: Find marker centers via template matching (single scale)."""
     positions = []
     for path in marker_paths:
         template = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
@@ -30,6 +30,37 @@ def detect_marker_positions(image_gray):
         w, h = template.shape[::-1]
         center = (max_loc[0] + w // 2, max_loc[1] + h // 2)
         positions.append(center)
+    return np.float32(positions)
+
+
+def detect_marker_positions_multiscale(image_gray, scale_range=[0.9, 1.0, 1.1, 1.2]):
+    """Augmented: Detect marker positions using multi-scale template matching."""
+    positions = []
+
+    for path in marker_paths:
+        best_score = -np.inf
+        best_center = None
+
+        base_template = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        if base_template is None:
+            raise FileNotFoundError(f"Marker template not found: {path}")
+
+        for scale in scale_range:
+            scaled_template = cv2.resize(
+                base_template, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+            result = cv2.matchTemplate(
+                image_gray, scaled_template, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, max_loc = cv2.minMaxLoc(result)
+            if max_val > best_score:
+                best_score = max_val
+                w, h = scaled_template.shape[::-1]
+                best_center = (max_loc[0] + w // 2, max_loc[1] + h // 2)
+
+        if best_center is not None:
+            positions.append(best_center)
+        else:
+            raise RuntimeError(f"No matching found for marker: {path}")
+
     return np.float32(positions)
 
 
@@ -64,23 +95,26 @@ def try_contour_transform(image):
     return None, None
 
 
-def transform_paper_image(image):
+def transform_paper_image(image, use_multiscale=True):
     """Dual-stage transformation: contour first, then marker alignment."""
     original_image = image.copy()
 
-    # === Stage 1: Try contour-based normalization ===
+    # Stage 1: Try contour-based normalization
     warped, largest_contour = try_contour_transform(original_image)
     base_for_marker = warped if warped is not None else original_image
 
-    # === Stage 2: Marker-based precision alignment ===
     try:
         gray = cv2.cvtColor(base_for_marker, cv2.COLOR_BGR2GRAY)
-        actual_positions = detect_marker_positions(gray)
+        if use_multiscale:
+            actual_positions = detect_marker_positions_multiscale(
+                gray, scale_range=[0.9, 1.0, 1.1, 1.2])
+        else:
+            actual_positions = detect_marker_positions(gray)
+
         M = cv2.getPerspectiveTransform(
             actual_positions, EXPECTED_MARKER_POSITIONS)
         final_warped = cv2.warpPerspective(base_for_marker, M, (850, 1202))
 
-        # Optional preview with detected markers
         preview_img = base_for_marker.copy()
         for pt in actual_positions:
             cv2.circle(preview_img, (int(pt[0]), int(

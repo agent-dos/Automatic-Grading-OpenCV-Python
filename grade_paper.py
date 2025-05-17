@@ -6,7 +6,7 @@ from pyzbar import pyzbar
 from qr_code import detect_qr_code
 
 # === Constants ===
-epsilon = 10  # image error sensitivity
+epsilon = 2  # image error sensitivity
 test_sensitivity_epsilon = 30  # bubble darkness error sensitivity
 answer_choices = ['A', 'B', 'C', 'D', 'E', '?']
 
@@ -51,23 +51,23 @@ ANSWER_FONT_THICKNESS = 2
 columns = COLUMN_ORIGINS
 
 
-def ProcessPage(paper):
+def ProcessPage(paper, marker_corners=None):
     answers = []
     gray_paper = cv2.cvtColor(paper, cv2.COLOR_BGR2GRAY)
 
-    # Locate markers
-    corners = FindCorners(paper)
-    if corners is None:
+    # Use passed marker positions or fallback to FindCorners
+    if marker_corners is None:
+        marker_corners = FindCorners(paper)
+    if marker_corners is None:
         return [-1], paper, [-1]
+    corners = marker_corners
 
     dimensions = [corners[1][0] - corners[0][0], corners[2][1] - corners[0][1]]
 
-    # Iterate over each column and question
     for k in range(NUM_COLUMNS):
         for i in range(NUM_ITEMS_PER_COLUMN):
             questions = []
             for j in range(NUM_CHOICES):
-                # Bounding box of the bubble
                 x_center = (columns[k][0] + j * CHOICE_SPACING_X) * \
                     dimensions[0] + corners[0][0]
                 y_center = (columns[k][1] + i * ITEM_SPACING_Y) * \
@@ -83,18 +83,14 @@ def ProcessPage(paper):
                 cv2.rectangle(paper, (x1, y1), (x2, y2), (255, 0, 0), 1)
                 questions.append(gray_paper[y1:y2, x1:x2])
 
-            # Darkness analysis
             means = [np.mean(q) if q.size > 0 else 255 for q in questions]
             min_arg = np.argmin(means)
             min_val = means[min_arg]
-
-            # Double bubble detection
             means[min_arg] = 255
             second_min = np.min(means)
             if second_min - min_val < test_sensitivity_epsilon:
                 min_arg = NUM_CHOICES  # '?'
 
-            # Annotate and save
             x_text = int((columns[k][0] - radius * 10) *
                          dimensions[0] + corners[0][0])
             y_text = int(y_center + 0.5 * radius * dimensions[1])

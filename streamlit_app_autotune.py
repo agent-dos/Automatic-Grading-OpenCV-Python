@@ -9,6 +9,13 @@ from enhance_image import image_enhancer, auto_enhance_image
 from transform_image import transform_paper_image
 from grade_paper import ProcessPage
 
+# ------------------- Constants -------------------
+C_RANGE = list(range(2, 11))  # Default C tuning range
+EXPECTED_WIDTH = 850
+EXPECTED_HEIGHT = 1202
+
+# ------------------- Helper Functions -------------------
+
 
 def range_slider_param(name, min_val, max_val, default, step, delta=2):
     center = st.sidebar.slider(name, min_val, max_val, default, step=step)
@@ -18,52 +25,56 @@ def range_slider_param(name, min_val, max_val, default, step, delta=2):
     return center, values
 
 
-def auto_enhance_and_process(img, blur_ksize, block_size, morph_kernel_size):
+def auto_enhance_and_process(img, param_grid, blur_ksize, block_size, morph_kernel_size):
     best_result = None
     best_score = -1
 
-    enhanced, best_C = auto_enhance_image(
-        img.copy(), blur_ksize, block_size, morph_kernel_size)
+    for C in param_grid["C"]:
+        try:
+            enhanced = image_enhancer(
+                img.copy(), blur_ksize, block_size, C, morph_kernel_size)
+            detection_img, warped_paper, _, method_used, marker_points = transform_paper_image(
+                enhanced)
 
-    detection_img, warped_paper, _, method_used, marker_points = transform_paper_image(
-        enhanced)
+            if (
+                method_used != "fallback"
+                and warped_paper is not None
+                and warped_paper.shape == (EXPECTED_HEIGHT, EXPECTED_WIDTH, 3)
+            ):
+                answers, graded_img, codes = ProcessPage(warped_paper.copy())
+                num_valid_answers = sum([1 for a in answers if a != '?'])
 
-    if (
-        method_used != "fallback" and
-        warped_paper is not None and
-        warped_paper.shape == (1202, 850, 3)
-    ):
-        answers, graded_img, codes = ProcessPage(warped_paper.copy())
+                # Alignment check
+                left_col_x = 126
+                right_col_x = 618
+                pixel_dist = right_col_x - left_col_x
+                normalized_dist = pixel_dist / EXPECTED_WIDTH
+                alignment_score = abs(normalized_dist - 0.578) < 0.01
 
-        num_valid_answers = sum([1 for a in answers if a != '?'])
+                if num_valid_answers > best_score and alignment_score:
+                    best_score = num_valid_answers
+                    best_result = {
+                        "answers": answers,
+                        "codes": codes,
+                        "graded_img": graded_img,
+                        "enhanced": enhanced,
+                        "detection_img": detection_img,
+                        "params": {
+                            "blur_ksize": blur_ksize,
+                            "block_size": block_size,
+                            "C": C,
+                            "morph_kernel_size": morph_kernel_size
+                        }
+                    }
 
-        # Column alignment diagnostic (simple horizontal difference)
-        left_col_x = 126
-        right_col_x = 618
-        col_width = 850
-        pixel_dist = right_col_x - left_col_x
-        normalized_dist = pixel_dist / col_width
-        alignment_score = abs(normalized_dist - 0.578) < 0.01
-
-        if alignment_score:
-            best_result = {
-                "answers": answers,
-                "codes": codes,
-                "graded_img": graded_img,
-                "enhanced": enhanced,
-                "detection_img": detection_img,
-                "params": {
-                    "blur_ksize": blur_ksize,
-                    "block_size": block_size,
-                    "C": best_C,
-                    "morph_kernel_size": morph_kernel_size
-                }
-            }
+        except Exception as e:
+            print(f"[Tuning Error] {e}")
+            continue
 
     return best_result
 
 
-# Streamlit App
+# ------------------- Streamlit App -------------------
 st.set_page_config(layout="wide")
 st.title("🧠 Enhanced Auto-Tuning OMR Pipeline")
 
@@ -86,7 +97,9 @@ if uploaded_file:
 
     result = None
     if auto_mode:
-        result = auto_enhance_and_process(original, blur_c, block_c, morph_c)
+        param_grid = {"C": C_RANGE}
+        result = auto_enhance_and_process(
+            original, param_grid, blur_c, block_c, morph_c)
 
     if result:
         enhanced = result["enhanced"]
@@ -100,13 +113,14 @@ if uploaded_file:
         enhanced = image_enhancer(original, blur_c, block_c, 2, morph_c)
         detection_img, warped_paper, _, method_used, marker_points = transform_paper_image(
             enhanced.copy())
-        if warped_paper is not None and warped_paper.shape == (1202, 850, 3):
+        if warped_paper is not None and warped_paper.shape == (EXPECTED_HEIGHT, EXPECTED_WIDTH, 3):
             extracted_answers, graded_image, codes = ProcessPage(
                 warped_paper.copy())
         else:
             st.error("❌ Pipeline failed. Check marker detection.")
             extracted_answers, graded_image, codes = [-1], None, [-1]
 
+    # ------------------- Display Results -------------------
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.image(original, caption="📷 Original", use_container_width=True)
